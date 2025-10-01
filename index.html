@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamerz App</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        :root {
+            --dark-bg: #1a1a2e; --primary-card-bg: #16213e; --secondary-card-bg: #0f3460;
+            --neon-primary: #e94560; --neon-green: #32ff7e; --neon-blue: #1e90ff;
+            --text-primary: #ffffff; --text-secondary: #a7a7a7; --border-color: #533483;
+            --red-btn: #ff4757; --orange-status: #f39c12;
+            --gold: #ffd700; --silver: #c0c0c0; --bronze: #cd7f32;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--dark-bg); color: var(--text-primary); }
+        .page { display: none; min-height: 100vh; }
+        .page.active { display: flex; }
+        #loader { flex-direction: column; justify-content: flex-start; align-items: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); z-index: 9999; }
+        #login-page { justify-content: center; align-items: center; text-align: center; }
+        .auth-container { background-color: var(--primary-card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); }
+        .auth-container h2 { color: var(--neon-primary); margin-bottom: 20px; }
+        .auth-container .form-group { text-align: left; margin-bottom: 15px; }
+        .auth-container label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+        .auth-container input { width: 100%; padding: 12px; background-color: var(--secondary-card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; }
+        .auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; background-color: var(--neon-blue); color: white; cursor: pointer; margin-top: 10px; }
+        .auth-switch-link { margin-top: 20px; font-size: 14px; color: var(--text-secondary); }
+        .auth-switch-link span { color: var(--neon-green); cursor: pointer; text-decoration: underline; }
+        .form.hidden { display: none; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background-color: var(--primary-card-bg); border-bottom: 2px solid var(--border-color); }
+        .toolbar-left { display: flex; align-items: center; gap: 15px; }
+        .toolbar-left .logo { font-size: 24px; font-weight: bold; color: var(--neon-primary); }
+        .toolbar-left .user-info { font-size: 14px; color: var(--text-secondary); }
+        .user-info .game-name { font-weight: bold; color: var(--text-primary); display: block; }
+        .toolbar-right .wallet { display: flex; align-items: center; gap: 8px; background-color: var(--secondary-card-bg); padding: 8px 12px; border-radius: 20px; border: 1px solid var(--neon-blue); }
+        .wallet #wallet-balance { font-weight: bold; letter-spacing: 1px; }
+        #main-content-area { padding-bottom: 70px; }
+        .banner-slider { width: 100%; max-width: 100%; margin: 6px auto 0; height: 150px; background-color: var(--secondary-card-bg); overflow: hidden; position: relative; }
+        .banner-wrapper { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
+        .banner-slide { min-width: 100%; height: 100%; }
+        .banner-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .announcement-bar { display: flex; align-items: center; height: 45px; background-color: var(--primary-card-bg); margin: 10px 6px; border-radius: 8px; overflow: hidden; padding: 0 15px; border: 1px solid var(--border-color); }
+        .announcement-bar .marquee-text { white-space: nowrap; animation: marquee 15s linear infinite; }
+        @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .tabs-container { display: flex; background-color: var(--primary-card-bg); position: relative; margin: 0 6px; border-radius: 8px; }
+        .tab { flex-grow: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: var(--text-secondary); transition: color 0.3s; }
+        .tab.active { color: var(--neon-primary); }
+        .tab-indicator { position: absolute; bottom: 0; height: 3px; background-color: var(--neon-primary); border-radius: 3px; transition: left 0.3s, width 0.3s; }
+        .tournaments-content { padding: 10px 6px; }
+        .tournament-card { background-color: var(--primary-card-bg); border-radius: 12px; margin-bottom: 15px; padding: 15px; position: relative; border: 1px solid var(--border-color); overflow: hidden; }
+        .ticker-tag { position: absolute; top: -1px; left: -1px; background-color: var(--neon-blue); color: white; padding: 4px 10px; font-size: 12px; font-weight: bold; border-bottom-right-radius: 12px; border-top-left-radius: 12px;}
+        .live-indicator { background-color: var(--neon-primary); color: white; padding: 5px 10px; font-size: 14px; font-weight: bold; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;}
+        .live-indicator .dot { display: inline-block; width: 8px; height: 8px; background-color: white; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .card-header .title { font-size: 18px; font-weight: bold; padding-right: 5px; }
+        .card-header .badges { display: flex; gap: 5px; flex-shrink: 0; }
+        .badges .badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; background-color: var(--secondary-card-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .card-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-info .datetime { font-size: 13px; color: var(--text-secondary); }
+        .card-info .countdown { font-size: 14px; font-weight: bold; color: var(--neon-green); }
+        .reward-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; background-color: var(--secondary-card-bg); padding: 10px; border-radius: 8px; margin-bottom: 12px; }
+        .reward-item { font-size: 12px; color: var(--text-secondary); }
+        .reward-item .value { display: block; font-weight: bold; font-size: 14px; color: var(--text-primary); }
+        .slots-row { margin-bottom: 15px; }
+        .slots-info { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+        .progress-bar-container { width: 100%; height: 10px; background-color: var(--secondary-card-bg); border-radius: 5px; overflow: hidden; }
+        .progress-bar { height: 100%; background-color: var(--neon-primary); border-radius: 5px; transition: width 0.5s ease-in-out; }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; }
+        .rules-btn, .join-btn, .results-btn, .room-details-btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .rules-btn { background-color: var(--red-btn); color: white; }
+        .join-btn { background-color: var(--neon-green); color: #000; }
+        .results-btn { background-color: var(--neon-blue); color: var(--text-primary); }
+        .room-details-btn { background-color: var(--neon-blue); color: white; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background-color: var(--primary-card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 2px solid var(--border-color); z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; color: var(--text-secondary); flex: 1; padding: 5px 0; }
+        .nav-item .icon { font-size: 22px; }
+        .nav-item .label { font-size: 12px; }
+        .nav-item.active { color: var(--neon-primary); }
+        .page-container { padding: 15px; }
+        .page-title { font-size: 24px; font-weight: bold; color: var(--neon-primary); margin-bottom: 20px; }
+        .profile-wallet-card { background: linear-gradient(45deg, var(--secondary-card-bg), var(--primary-card-bg)); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+        .profile-wallet-card .balance-label { font-size: 16px; color: var(--text-secondary); }
+        .profile-wallet-card .balance-amount { font-size: 32px; font-weight: bold; margin: 10px 0; letter-spacing: 2px; }
+        .profile-actions { display: flex; gap: 10px; }
+        .profile-actions button { flex-grow: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .add-money-btn { background-color: var(--neon-green); color: #000; }
+        .withdraw-btn { background-color: var(--neon-primary); color: #FFF; }
+        .profile-menu { display: flex; flex-direction: column; gap: 8px; }
+        .profile-menu-item { display: flex; align-items: center; background-color: var(--primary-card-bg); padding: 15px; border-radius: 8px; color: var(--text-primary); text-decoration: none; gap: 15px; cursor: pointer; }
+        .profile-menu-item i { width: 20px; text-align: center; color: var(--neon-blue); }
+        .profile-menu-item.logout { color: var(--neon-primary); }
+        .profile-menu-item.logout i { color: var(--neon-primary); }
+        .dialog-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .dialog-overlay.show { display: flex; }
+        .dialog-box { background-color: var(--primary-card-bg); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); }
+        .dialog-content { max-height: 60vh; overflow-y: auto; line-height: 1.6; color: var(--text-secondary); margin-top: 15px; margin-bottom: 20px; white-space: pre-wrap; text-align: center; font-size: 16px; }
+        .dialog-form label { display: block; font-size: 12px; margin-bottom: 5px; }
+        .dialog-form input, .dialog-form .input-group input { width: 100%; padding: 10px; background: var(--secondary-card-bg); border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-primary); margin-bottom: 15px; }
+        .input-group { display: flex; align-items: center; }
+        .input-group input { margin-bottom: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .copy-btn { padding: 10px; border: 1px solid var(--border-color); background-color: var(--neon-blue); color: white; border-left: 0; border-radius: 0 5px 5px 0; cursor: pointer; }
+        .submit-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; background-color: var(--neon-green); color: #000; cursor: pointer; }
+        .close-dialog-btn { width: 100%; padding: 12px; margin-top: 10px; border: none; border-radius: 8px; background-color: var(--neon-primary); color: white; cursor: pointer; }
+        .fullscreen-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--dark-bg); z-index: 100; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s ease-in-out; }
+        .fullscreen-page.show { transform: translateX(0); }
+        .fs-header { display: flex; align-items: center; padding: 15px; background-color: var(--primary-card-bg); gap: 15px; }
+        .fs-title { font-size: 20px; font-weight: bold; }
+        .fs-content { padding: 15px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; color: var(--text-secondary); margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; background-color: var(--secondary-card-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; margin-top: 5px; }
+        .amount-input { font-size: 48px; text-align: center; font-weight: bold; outline: none; background: none; border: none; border-bottom: 2px solid var(--border-color); color: var(--text-primary); width: 100%; margin: 10px 0 20px 0; }
+        .preset-amounts { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+        .preset-amount { background-color: var(--primary-card-bg); border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 20px; border-radius: 20px; cursor: pointer; }
+        #bank-details.hidden, #upi-details.hidden { display: none; }
+        .tx-item { display: flex; align-items: center; background-color: var(--primary-card-bg); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .tx-icon { font-size: 20px; margin-right: 15px; width: 30px; text-align: center; }
+        .tx-details { flex-grow: 1; }
+        .tx-title { font-weight: bold; }
+        .tx-time { font-size: 12px; color: var(--text-secondary); }
+        .tx-amount-wrapper { text-align: right; }
+        .tx-amount { font-weight: bold; font-size: 16px; }
+        .tx-amount.credit { color: var(--neon-green); }
+        .tx-amount.debit { color: var(--neon-primary); }
+        .tx-status { font-size: 12px; padding: 3px 8px; border-radius: 10px; margin-top: 4px; display: inline-block; }
+        .tx-status.Successful { background-color: var(--neon-green); color: #000; }
+        .tx-status.Pending { background-color: var(--orange-status); color: #000; }
+        .tx-status.Rejected { background-color: var(--red-btn); color: var(--text-primary); }
+        .results-list { padding: 0; list-style-type: none; }
+        .result-card { background-color: var(--primary-card-bg); border-radius: 10px; margin-bottom: 10px; padding: 15px; display: flex; align-items: center; justify-content: space-between; border-left: 5px solid transparent; transition: transform 0.2s; }
+        .result-card:hover { transform: scale(1.02); }
+        .result-card.rank-1 { border-color: #ffd700; background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), var(--primary-card-bg));}
+        .result-card.rank-2 { border-color: #c0c0c0; background: linear-gradient(90deg, rgba(192, 192, 192, 0.1), var(--primary-card-bg));}
+        .result-card.rank-3 { border-color: #cd7f32; background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), var(--primary-card-bg));}
+        .result-info { display: flex; align-items: center; }
+        .result-rank { font-size: 24px; font-weight: bold; color: var(--text-secondary); width: 50px; text-align: center; }
+        .result-card.rank-1 .result-rank, .result-card.rank-2 .result-rank, .result-card.rank-3 .result-rank { font-size: 28px; }
+        .result-name { font-size: 16px; font-weight: 500; }
+        .result-prize { font-size: 18px; font-weight: bold; color: var(--neon-green); }
+        .dialog-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .dialog-buttons button { flex-grow: 1; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; }
+        .dialog-ok-btn { background-color: var(--neon-blue); color: white; }
+        .dialog-cancel-btn { background-color: var(--secondary-card-bg); color: var(--text-secondary); }
+        @keyframes shimmer-animation { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        .shimmer-bg { animation: shimmer-animation 2s infinite linear; background: linear-gradient(to right, var(--primary-card-bg) 8%, #1f2c4c 18%, var(--primary-card-bg) 33%); background-size: 2000px 100%; }
+        .shimmer-wrapper { padding: 10px 6px; width: 100%; }
+        .shimmer-header { display: flex; align-items: center; padding: 12px 10px; margin-bottom: 12px; }
+        .shimmer-logo { height: 30px; width: 120px; border-radius: 8px; margin-right: auto; }
+        .shimmer-wallet { height: 35px; width: 90px; border-radius: 20px; }
+        .shimmer-banner { height: 150px; width: 100%; border-radius: 8px; margin-bottom: 10px; }
+        .shimmer-tabs { height: 45px; width: 100%; border-radius: 8px; margin-bottom: 15px; margin-top: 10px; }
+        .shimmer-card { background-color: var(--primary-card-bg); border-radius: 12px; margin-bottom: 15px; padding: 15px; border: 1px solid var(--border-color); }
+        .shimmer-line { height: 16px; border-radius: 8px; margin-bottom: 10px; }
+        .shimmer-line.short { width: 60%; }
+        .shimmer-line.medium { width: 80%; }
+        .shimmer-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .shimmer-button { height: 40px; width: 100px; border-radius: 8px; }
+        
+        /* === IMPROVED LEADERBOARD STYLES === */
+        .leaderboard-container { padding: 15px 5px; }
+        .podium { display: flex; justify-content: center; align-items: flex-end; gap: 5px; margin-bottom: 25px; }
+        .podium-item { text-align: center; width: 33%; background-color: var(--secondary-card-bg); border-top: 3px solid transparent; border-radius: 16px 16px 8px 8px; padding: 15px 5px; padding-bottom: 10px; position: relative; }
+        .podium-item .podium-icon { font-size: 55px; border-radius: 50%; padding: 5px; position: relative; display: inline-block; margin-bottom: 10px; }
+        .podium-item .podium-rank { position: absolute; bottom: 10px; right: 0; background-color: var(--secondary-card-bg); width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; border: 2px solid var(--dark-bg); font-size: 12px; }
+        .podium-item.rank-1 { order: 2; padding-top: 30px; border-top-color: var(--gold); } /* Elevated */
+        .podium-item.rank-2 { order: 1; border-top-color: var(--silver); }
+        .podium-item.rank-3 { order: 3; border-top-color: var(--bronze); }
+        .podium-item.rank-1 .podium-icon { font-size: 65px; }
+        .podium-item.rank-1 .podium-rank { background-color: var(--gold); color: #000; }
+        .podium-item.rank-2 .podium-rank { background-color: var(--silver); color: #000; }
+        .podium-item.rank-3 .podium-rank { background-color: var(--bronze); color: #000; }
+        .podium-item .podium-crown { color: var(--gold); font-size: 24px; position: absolute; top: 5px; left: 50%; transform: translateX(-50%); }
+        .podium-name { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px; }
+        .podium-score { font-weight: bold; font-size: 20px; }
+        .podium-score.score-gold { color: var(--gold); }
+        .podium-score.score-silver { color: var(--neon-blue); }
+        .podium-score.score-bronze { color: var(--neon-green); }
+        .rank-list { background-color: var(--primary-card-bg); border-radius: 12px; padding: 10px; }
+        .rank-list-item { display: flex; align-items: center; padding: 12px 10px; border-bottom: 1px solid var(--secondary-card-bg); }
+        .rank-list-item:last-child { border-bottom: none; }
+        .rank-list-item .rank-number { font-weight: bold; color: var(--text-secondary); width: 30px; font-size: 14px; text-align: center; }
+        .rank-list-item .rank-icon { font-size: 30px; margin: 0 15px; color: var(--text-secondary); }
+        .rank-list-item .rank-name { font-weight: 500; font-size: 15px; flex-grow: 1; }
+        .rank-list-item .rank-score { margin-left: auto; font-weight: bold; color: var(--neon-green); font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div id="loader" class="page active">
+        <div class="shimmer-wrapper">
+            <div class="shimmer-header"><div class="shimmer-logo shimmer-bg"></div><div class="shimmer-wallet shimmer-bg"></div></div>
+            <div class="shimmer-banner shimmer-bg"></div>
+            <div class="shimmer-tabs shimmer-bg"></div>
+            <div class="shimmer-card"><div class="shimmer-line medium shimmer-bg"></div><div class="shimmer-line short shimmer-bg"></div><div class="shimmer-line shimmer-bg" style="height: 60px; margin-top: 15px;"></div><div class="shimmer-line shimmer-bg" style="margin-top: 15px;"></div><div class="shimmer-footer"><div class="shimmer-button shimmer-bg"></div><div class="shimmer-button shimmer-bg"></div></div></div>
+            <div class="shimmer-card"><div class="shimmer-line medium shimmer-bg"></div><div class="shimmer-line short shimmer-bg"></div><div class="shimmer-line shimmer-bg" style="height: 60px; margin-top: 15px;"></div><div class="shimmer-line shimmer-bg" style="margin-top: 15px;"></div><div class="shimmer-footer"><div class="shimmer-button shimmer-bg"></div><div class="shimmer-button shimmer-bg"></div></div></div>
+        </div>
+    </div>
+    <div id="login-page" class="page"></div>
+    <div id="app-container" style="display: none;"></div>
+    
+    <div id="custom-alert-dialog" class="dialog-overlay"></div>
+    <div id="generic-dialog" class="dialog-overlay"></div>
+    <div id="edit-profile-dialog" class="dialog-overlay"></div>
+    <div id="room-details-dialog" class="dialog-overlay"></div>
+    <div id="transaction-page" class="fullscreen-page"></div>
+    <div id="leaderboard-page" class="fullscreen-page"></div>
+    <div id="add-money-page" class="fullscreen-page"></div>
+    <div id="withdraw-money-page" class="fullscreen-page"></div>
+    <div id="results-page" class="fullscreen-page"></div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, get, update, push, serverTimestamp, query, orderByChild, equalTo, limitToLast, onChildAdded, onChildChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdToKgKQUI9WGbpWJYASQjNI2MWo8zzYw",
+            authDomain: "special-offer-5509a.firebaseapp.com",
+            databaseURL: "https://special-offer-5509a-default-rtdb.firebaseio.com",
+            projectId: "special-offer-5509a",
+            storageBucket: "special-offer-5509a.firebasestorage.app",
+            messagingSenderId: "1098200266967",
+            appId: "1:1098200266967:web:5062e66e3f1439dd139892"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getDatabase();
+        let currentUser = null, userData = null, appConfig = {}, tournaments = {};
+        let countdownIntervals = [], listenersAttached = false, bannerInterval = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                document.getElementById('loader').classList.add('active');
+                const userRef = ref(db, 'users/' + user.uid);
+                const snapshot = await get(userRef);
+                if (snapshot.exists()) {
+                    currentUser = user;
+                } else {
+                    const newUserData = { displayName: user.displayName || `Player${user.uid.substring(0,5)}`, email: user.email, wallet: 0, winnings: 0, playerUid: '' };
+                    await set(userRef, newUserData);
+                    currentUser = user;
+                }
+                if (document.getElementById('app-container').style.display === 'none') initializeAppUI();
+                setupRealtimeListeners(user.uid);
+            } else {
+                currentUser = null; userData = null; listenersAttached = false;
+                if(bannerInterval) clearInterval(bannerInterval);
+                document.getElementById('app-container').innerHTML = '';
+                showAuthUI();
+            }
+        });
+
+        function setupRealtimeListeners(userId) {
+            let initialDataLoaded = { user: false, config: false, tournaments: false };
+            const hideLoaderWhenReady = () => {
+                if (initialDataLoaded.user && initialDataLoaded.config && initialDataLoaded.tournaments) {
+                    document.getElementById('loader').classList.remove('active');
+                }
+            };
+            onValue(ref(db, 'users/' + userId), (snapshot) => { 
+                userData = snapshot.val(); 
+                updateDynamicUI(); 
+                if (!initialDataLoaded.user) { initialDataLoaded.user = true; hideLoaderWhenReady(); }
+            }, { onlyOnce: false });
+            onValue(ref(db, 'appConfig'), (snapshot) => { 
+                appConfig = snapshot.val() || {}; 
+                const marquee = document.querySelector('.marquee-text'); 
+                if (marquee) marquee.innerText = appConfig.announcement || 'Welcome!';
+                if (document.querySelector('.banner-slider')) setupBannerSlider();
+                if (!initialDataLoaded.config) { initialDataLoaded.config = true; hideLoaderWhenReady(); }
+            }, { onlyOnce: false });
+            onValue(ref(db, 'tournaments'), (snapshot) => { 
+                tournaments = snapshot.val() || {}; 
+                const activePage = document.querySelector('.nav-item.active')?.dataset.page;
+                if (activePage === 'home') {
+                    const currentTab = document.querySelector('.tab.active');
+                    if(currentTab) renderTournaments(currentTab.dataset.tab);
+                }
+                if (activePage === 'my-content') {
+                    renderMyContentScreen(document.getElementById('main-content-area'));
+                }
+                if (!initialDataLoaded.tournaments) { initialDataLoaded.tournaments = true; hideLoaderWhenReady(); }
+            }, { onlyOnce: false });
+            const txRef = query(ref(db, `transactions/${userId}`), orderByChild('timestamp'));
+            onChildAdded(txRef, () => { if(document.getElementById('transaction-page').classList.contains('show')) renderTransactionPage(); });
+            onChildChanged(txRef, () => { if(document.getElementById('transaction-page').classList.contains('show')) renderTransactionPage(); });
+        }
+        
+        function showAuthUI() {
+            document.getElementById('app-container').style.display = 'none';
+            const loginPage = document.getElementById('login-page');
+            loginPage.innerHTML = `<div class="auth-container"><div id="login-form" class="form"><h2>Login</h2><form id="login-form-main"><div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" required></div><div class="form-group"><label for="login-password">Password</label><input type="password" id="login-password" required></div><button type="submit" class="auth-btn">Login</button></form><p class="auth-switch-link">Don't have an account? <span id="show-signup">Sign Up</span></p></div><div id="signup-form" class="form hidden"><h2>Sign Up</h2><form id="signup-form-main"><div class="form-group"><label for="signup-name">Your Name</label><input type="text" id="signup-name" required></div><div class="form-group"><label for="signup-email">Email</label><input type="email" id="signup-email" required></div><div class="form-group"><label for="signup-password">Password</label><input type="password" id="signup-password" minlength="6" required></div><button type="submit" class="auth-btn">Create Account</button></form><p class="auth-switch-link">Already have an account? <span id="show-login">Login</span></p></div></div>`;
+            document.getElementById('loader').classList.remove('active');
+            loginPage.classList.add('active');
+            addAuthEventListeners();
+        }
+
+        function addAuthEventListeners() {
+            document.getElementById('show-signup').addEventListener('click', () => { document.getElementById('login-form').classList.add('hidden'); document.getElementById('signup-form').classList.remove('hidden'); });
+            document.getElementById('show-login').addEventListener('click', () => { document.getElementById('signup-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); });
+            const signupForm = document.getElementById('signup-form-main');
+            if(signupForm) signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = e.target.elements['signup-name'].value;
+                const email = e.target.elements['signup-email'].value;
+                const password = e.target.elements['signup-password'].value;
+                try {
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+                    await updateProfile(cred.user, { displayName: name });
+                    await set(ref(db, 'users/' + cred.user.uid), { displayName: name, email: email, wallet: 0, winnings: 0, playerUid: '' });
+                } catch(error) { handleAuthError(error); }
+            });
+            const loginForm = document.getElementById('login-form-main');
+            if(loginForm) loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                signInWithEmailAndPassword(auth, e.target.elements['login-email'].value, e.target.elements['login-password'].value).catch(handleAuthError);
+            });
+        }
+
+        function handleAuthError(error) {
+            const messages = {'auth/email-already-in-use': 'Email is already registered. Please login.','auth/wrong-password': 'Incorrect password.','auth/user-not-found': 'No account found. Please sign up.','auth/invalid-email': 'Please enter a valid email.','auth/weak-password': 'Password must be at least 6 characters.'};
+            showCustomAlert(messages[error.code] || 'An error occurred.');
+        }
+
+        function initializeAppUI() {
+            document.getElementById('app-container').innerHTML = `<header class="toolbar"><div class="toolbar-left"><div class="logo">GAMERZ</div><div class="user-info"><span id="user-name"></span><span class="game-name">Arena Of Valor</span></div></div><div class="toolbar-right"><div class="wallet">💰<span id="wallet-balance"></span></div></div></header><main id="main-content-area"></main><nav class="bottom-nav"><div class="nav-item active" data-page="home"><span class="icon">🏠</span><span class="label">Home</span></div><div class="nav-item" data-page="my-content"><span class="icon">🎮</span><span class="label">My Content</span></div><div class="nav-item" data-page="profile"><span class="icon">👤</span><span class="label">Profile</span></div></nav>`;
+            document.getElementById('login-page').classList.remove('active');
+            document.getElementById('app-container').style.display = 'block';
+            renderPage('home');
+            if (!listenersAttached) { addAppEventListeners(); listenersAttached = true; }
+        }
+
+        function addAppEventListeners() {
+            document.querySelector('.bottom-nav')?.addEventListener('click', e => { const navItem = e.target.closest('.nav-item'); if (navItem) renderPage(navItem.dataset.page); });
+            document.body.addEventListener('click', e => {
+                const target = e.target;
+                if(target.matches('.join-btn')) joinTournament(target.dataset.id);
+                if(target.matches('.results-btn')) renderResultsPage(target.dataset.id);
+                if(target.matches('.rules-btn')) showDialog('Tournament Rules', target.dataset.rules);
+                if(target.matches('.tab')) switchTab(target);
+                if(target.matches('.room-details-btn')) showRoomDetails(target.dataset.id);
+                if(target.closest('.profile-menu-item')) handleProfileMenuClick(target.closest('.profile-menu-item').dataset.action);
+                if(target.matches('.close-dialog-btn')) target.closest('.dialog-overlay').classList.remove('show');
+                if(target.closest('.back-btn')) closeFullscreenPage(target.closest('.fullscreen-page').id);
+                if(target.matches('.add-money-btn')) renderAddMoneyPage();
+                if(target.matches('.withdraw-btn')) renderWithdrawMoneyPage();
+                if(target.matches('.preset-amount')) document.getElementById('add-amount').value = target.dataset.amount;
+                if(target.matches('.copy-btn')) copyToClipboard(target.dataset.copy);
+            });
+            document.body.addEventListener('submit', async e => {
+                e.preventDefault();
+                if(e.target.id === 'edit-profile-form') {
+                    await update(ref(db, 'users/' + currentUser.uid), { displayName: e.target.elements['edit-name'].value, playerUid: e.target.elements['edit-player-uid'].value });
+                    document.getElementById('edit-profile-dialog').classList.remove('show');
+                    showCustomAlert('Profile Updated!');
+                }
+                if(e.target.id === 'add-money-form') submitPayment(e.target);
+                if(e.target.id === 'withdraw-form') submitWithdrawal(e.target);
+            });
+            document.body.addEventListener('change', e => {
+                if(e.target.id === 'withdraw-method') {
+                    document.getElementById('bank-details').classList.toggle('hidden', e.target.value !== 'bank');
+                    document.getElementById('upi-details').classList.toggle('hidden', e.target.value !== 'upi');
+                }
+            });
+        }
+        
+        function renderPage(pageName) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === pageName));
+            const mainArea = document.getElementById('main-content-area');
+            if(bannerInterval) clearInterval(bannerInterval);
+            if (pageName === 'home') renderHomeScreen(mainArea);
+            if (pageName === 'my-content') renderMyContentScreen(mainArea);
+            if (pageName === 'profile') renderProfileScreen(mainArea);
+        }
+        
+        function renderHomeScreen(container) {
+            container.innerHTML = `<section class="banner-slider"><div class="banner-wrapper"></div></section><section class="announcement-bar"><span class="icon">📢</span><div class="marquee-text">${appConfig.announcement || 'Welcome!'}</div></section><nav class="tabs-container"><div class="tab active" data-tab="Upcoming">Upcoming</div><div class="tab" data-tab="Live">Live</div><div class="tab" data-tab="Complete">Complete</div><div class="tab-indicator"></div></nav><div class="tournaments-content"><div id="tournament-list"></div></div>`;
+            updateTabIndicator();
+            renderTournaments('Upcoming');
+            setupBannerSlider();
+        }
+
+        function setupBannerSlider() {
+            const wrapper = document.querySelector('.banner-wrapper');
+            if(!wrapper) return;
+            if(bannerInterval) clearInterval(bannerInterval);
+            const banners = appConfig.banners ? Object.values(appConfig.banners) : [];
+            if(banners.length === 0) { wrapper.innerHTML = `<div class="banner-slide" style="display:flex; align-items:center; justify-content:center;">No Promotions</div>`; return; }
+            wrapper.innerHTML = banners.map(url => `<div class="banner-slide"><img src="${url}" alt="banner"></div>`).join('');
+            if (banners.length < 2) return;
+            let currentIndex = 0;
+            bannerInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % banners.length;
+                wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+            }, 3000);
+        }
+
+        function renderTournaments(status) {
+            const listEl = document.getElementById('tournament-list');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+            const filtered = Object.entries(tournaments).filter(([id, t]) => t && t.status === status).sort((a,b) => new Date(a[1].dateTime) - new Date(b[1].dateTime));
+            if (filtered.length === 0) { listEl.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No ${status} tournaments.</p>`; return; }
+            filtered.forEach(([id, t]) => {
+                const joinedCount = t.joinedPlayers ? Object.keys(t.joinedPlayers).length : 0;
+                const slotsLeft = t.totalSlots - joinedCount;
+                const progress = t.totalSlots > 0 ? (joinedCount / t.totalSlots) * 100 : 0;
+                const isJoined = t.joinedPlayers && t.joinedPlayers[currentUser.uid];
+                const card = document.createElement('div'); card.className = 'tournament-card';
+                card.innerHTML = `${t.status === 'Upcoming' ? '<div class="ticker-tag">Upcoming</div>' : ''}<div class="card-header"><div class="title">${t.title}</div><div class="badges"><span class="badge">${t.mode}</span></div></div><div class="card-info"><div class="datetime">${new Date(t.dateTime).toLocaleString()}</div>${t.status === 'Upcoming' ? `<div class="countdown" data-time="${t.dateTime}"></div>` : ''}</div><div class="reward-row"><div class="reward-item">Prize Pool<span class="value">🪙 ${t.prizePool}</span></div><div class="reward-item">Per Kill<span class="value">🪙 ${t.perKill}</span></div><div class="reward-item">Entry Fee<span class="value">🪙 ${t.entryFee}</span></div></div><div class="slots-row"><div class="slots-info"><span class="slots-left">${slotsLeft < 0 ? 0 : slotsLeft} Slots Left</span><span>Total: ${t.totalSlots}</span></div><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div></div><div class="card-footer">${getButtonHTML(id, t, isJoined)}</div>`;
+                listEl.appendChild(card);
+            });
+            startAllCountdowns();
+        }
+
+        function getButtonHTML(id, t, isJoined) {
+            let rulesBtn = `<button class="rules-btn" data-rules="${t.rules || 'No rules.'}">RULES</button>`;
+            let actionBtn = '';
+            if (t.status === 'Upcoming') {
+                if (isJoined) actionBtn = `<button class="join-btn" style="background-color: grey;" disabled>JOINED</button>`;
+                else if (t.totalSlots - (t.joinedPlayers ? Object.keys(t.joinedPlayers).length : 0) <= 0) actionBtn = `<button class="join-btn" style="background-color: var(--red-btn);" disabled>FULL</button>`;
+                else actionBtn = `<button class="join-btn" data-id="${id}">JOIN</button>`;
+            } else if (t.status === 'Live') { actionBtn = `<div class="live-indicator"><span class="dot"></span>LIVE NOW</div>`;
+            } else { actionBtn = `<button class="results-btn" data-id="${id}">RESULTS</button>`; }
+            return rulesBtn + actionBtn;
+        }
+
+        function renderProfileScreen(container) {
+            container.innerHTML = `<div class="page-container"><h2 class="page-title">My Profile</h2><div class="profile-wallet-card"><div class="balance-label">Total Wallet Balance</div><div class="balance-amount">🪙 <span id="profile-wallet-balance"></span></div><div class="profile-actions"><button class="add-money-btn">Add Money</button><button class="withdraw-btn">Withdraw</button></div></div><div class="profile-menu"><div class="profile-menu-item" data-action="edit-profile"><i class="fas fa-user-edit"></i> Edit Profile</div><div class="profile-menu-item" data-action="transactions"><i class="fas fa-history"></i> Transaction History</div><div class="profile-menu-item" data-action="leaderboard"><i class="fas fa-trophy"></i> Leaderboard</div><div class="profile-menu-item" data-action="privacy"><i class="fas fa-shield-alt"></i> Privacy Policy</div><div class="profile-menu-item" data-action="terms"><i class="fas fa-file-contract"></i> Terms & Conditions</div><div class="profile-menu-item" data-action="support"><i class="fas fa-question-circle"></i> Help & Support</div><div class="profile-menu-item logout" data-action="logout"><i class="fas fa-sign-out-alt"></i> Log Out</div></div></div>`;
+            updateDynamicUI();
+        }
+
+        function renderMyContentScreen(container) {
+            container.innerHTML = `<div class="page-container"><h2 class="page-title">My Joined Tournaments</h2><div id="my-content-list" class="tournaments-content"></div></div>`;
+            const listEl = document.getElementById('my-content-list');
+            const joined = Object.entries(tournaments).filter(([id, t]) => t && t.joinedPlayers && t.joinedPlayers[currentUser.uid]).sort((a,b) => new Date(b[1].dateTime) - new Date(a[1].dateTime));
+            if(joined.length === 0) { listEl.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">You haven't joined any tournaments yet.</p>`; return; }
+            joined.forEach(([id, t]) => {
+                const card = document.createElement('div'); card.className = 'tournament-card';
+                let actionBtn = '';
+                if (t.status === 'Live' || t.status === 'Upcoming') {
+                    actionBtn = `<button class="room-details-btn" data-id="${id}">ROOM DETAILS</button>`;
+                } else {
+                    actionBtn = `<button class="results-btn" data-id="${id}">RESULTS</button>`;
+                }
+                card.innerHTML = `<div class="card-header"><div class="title">${t.title}</div><div class="badges"><span class="badge">${t.mode}</span></div></div><div class="card-info"><div class="datetime">${new Date(t.dateTime).toLocaleString()}</div>${t.status === 'Upcoming' ? `<div class="countdown" data-time="${t.dateTime}"></div>` : `<div style="color:var(--neon-primary); font-weight: bold;">${t.status.toUpperCase()}</div>`}</div><div class="card-footer">${actionBtn}</div>`;
+                listEl.appendChild(card);
+            });
+            startAllCountdowns();
+        }
+        
+        async function joinTournament(tournamentId) {
+            const t = tournaments[tournamentId];
+            if ((userData.wallet || 0) < t.entryFee) {
+                showCustomAlert("Insufficient funds! Please add money to join.");
+                return;
+            }
+            showCustomAlert(`Confirm to join for ${t.entryFee} coins?`, 'confirm', async () => {
+                const newWallet = userData.wallet - t.entryFee;
+                const updates = {};
+                updates[`/users/${currentUser.uid}/wallet`] = newWallet;
+                updates[`/tournaments/${tournamentId}/joinedPlayers/${currentUser.uid}`] = { displayName: userData.displayName, playerUid: userData.playerUid || '' };
+                const newTxRef = push(ref(db, `transactions/${currentUser.uid}`));
+                updates[`/transactions/${currentUser.uid}/${newTxRef.key}`] = { type: "Entry Fee", amount: t.entryFee, details: `Joined '${t.title}'`, status: "Successful", timestamp: serverTimestamp() };
+                await update(ref(db), updates);
+                showCustomAlert("Successfully joined!");
+            });
+        }
+
+        function handleProfileMenuClick(action) {
+            if (action === 'logout') {
+                showCustomAlert('Are you sure you want to log out?', 'confirm', () => signOut(auth));
+                return;
+            }
+            if (action === 'edit-profile') {
+                const dialogHTML = `<div class="dialog-box"><h3 class="page-title" style="text-align: center; margin-bottom: 25px; font-size: 22px;">Edit Profile</h3><form id="edit-profile-form"><div class="form-group"><label for="edit-name">Display Name</label><input type="text" id="edit-name" value="${userData.displayName}" required></div><div class="form-group"><label for="edit-player-uid">Player UID (In-game)</label><input type="text" id="edit-player-uid" value="${userData.playerUid || ''}" placeholder="Enter your game UID"></div><button type="submit" class="submit-btn" style="background: var(--neon-blue); color: white; margin-top: 10px;">Save Changes</button><button type="button" class="close-dialog-btn">Cancel</button></form></div>`;
+                document.getElementById('edit-profile-dialog').innerHTML = dialogHTML;
+                document.getElementById('edit-profile-dialog').classList.add('show');
+                return;
+            }
+            if (action === 'transactions') { renderTransactionPage(); return; }
+            if (action === 'leaderboard') { renderLeaderboardPage(); return; }
+            const policies = { 'privacy': 'Privacy Policy', 'terms': 'Terms & Conditions', 'support': 'Help & Support' };
+            if(policies[action]) { showDialog(policies[action], appConfig[action] || 'Content not available.'); }
+        }
+        
+        function startAllCountdowns() {
+            countdownIntervals.forEach(clearInterval); countdownIntervals = [];
+            document.querySelectorAll('.countdown').forEach(el => {
+                const targetTime = new Date(el.dataset.time).getTime();
+                const update = () => {
+                    const dist = targetTime - Date.now();
+                    if (dist < 0) { el.innerHTML = "Started!"; return; }
+                    const d=Math.floor(dist/(1000*60*60*24)), h=Math.floor((dist%(1000*60*60*24))/(1000*60*60)), m=Math.floor((dist%(1000*60*60))/(1000*60)), s=Math.floor((dist%(1000*60))/1000);
+                    el.innerHTML = `${d}d ${h}h ${m}m ${s}s`;
+                };
+                update(); countdownIntervals.push(setInterval(update, 1000));
+            });
+        }
+        function updateTabIndicator() {
+            const activeTab = document.querySelector('.tab.active'), indicator = document.querySelector('.tab-indicator');
+            if (activeTab && indicator) { indicator.style.width = `${activeTab.offsetWidth}px`; indicator.style.left = `${activeTab.offsetLeft}px`; }
+        }
+        function switchTab(tabEl) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tabEl.classList.add('active');
+            updateTabIndicator();
+            renderTournaments(tabEl.dataset.tab);
+        }
+        function updateDynamicUI() {
+            if (!userData || document.getElementById('app-container').style.display === 'none') return;
+            const bal = (userData.wallet || 0).toLocaleString();
+            const walletEl = document.getElementById('wallet-balance'), profileWalletEl = document.getElementById('profile-wallet-balance'), nameEl = document.getElementById('user-name');
+            if (walletEl) walletEl.innerText = bal;
+            if (profileWalletEl) profileWalletEl.innerText = bal;
+            if (nameEl) nameEl.innerText = `Welcome, ${userData.displayName}`;
+        }
+        
+        function showDialog(title, content) {
+            const dialog = document.getElementById('generic-dialog');
+            dialog.innerHTML = `<div class="dialog-box"><h3 style="text-align: center;">${title}</h3><div class="dialog-content" style="text-align: left;">${content.replace(/\n/g, '<br>')}</div><button class="close-dialog-btn">Close</button></div>`;
+            dialog.classList.add('show');
+        }
+
+        function showCustomAlert(message, type = 'alert', onConfirm = null) {
+            const dialog = document.getElementById('custom-alert-dialog');
+            let buttonsHTML = '';
+            if (type === 'confirm') {
+                buttonsHTML = `<div class="dialog-buttons"><button class="dialog-cancel-btn">Cancel</button><button class="dialog-ok-btn">OK</button></div>`;
+            } else {
+                buttonsHTML = `<div class="dialog-buttons"><button class="dialog-ok-btn">OK</button></div>`;
+            }
+            dialog.innerHTML = `<div class="dialog-box"><h3 style="text-align: center; color: var(--neon-primary); margin-bottom: 10px;">${type === 'confirm' ? 'Confirm' : 'Alert'}</h3><div class="dialog-content">${message}</div>${buttonsHTML}</div>`;
+            const close = () => dialog.classList.remove('show');
+            const okBtn = dialog.querySelector('.dialog-ok-btn');
+            okBtn.addEventListener('click', () => {
+                close();
+                if (onConfirm) onConfirm();
+            });
+            const cancelBtn = dialog.querySelector('.dialog-cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', close);
+            }
+            dialog.classList.add('show');
+        }
+
+        async function renderTransactionPage() {
+            const page = document.getElementById('transaction-page');
+            page.innerHTML = `<div class="fs-header"><button class="back-btn"><i class="fas fa-arrow-left"></i></button><h2 class="fs-title">Transaction History</h2></div><div class="fs-content" id="transaction-list">Loading...</div>`;
+            openFullscreenPage('transaction-page');
+            const txRef = query(ref(db, `transactions/${currentUser.uid}`), orderByChild('timestamp'), limitToLast(50));
+            const snapshot = await get(txRef);
+            const listEl = page.querySelector('#transaction-list');
+            if(!snapshot.exists()) { 
+                listEl.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No transactions yet.</p>`; 
+                return; 
+            }
+            let html = '';
+            const transactions = [];
+            snapshot.forEach(childSnapshot => { transactions.push(childSnapshot.val()); });
+            transactions.reverse();
+            transactions.forEach(tx => {
+                let icon, amountClass, sign, title;
+                switch(tx.type) {
+                    case 'Deposit': icon = 'fa-wallet'; amountClass = 'credit'; sign = '+'; title = 'Add Fund'; break;
+                    case 'Winnings': icon = 'fa-trophy'; amountClass = 'credit'; sign = '+'; title = tx.details || 'Tournament Prize'; break;
+                    case 'Withdrawal': icon = 'fa-university'; amountClass = 'debit'; sign = '-'; title = 'Withdrawal'; break;
+                    case 'Entry Fee': icon = 'fa-gamepad'; amountClass = 'debit'; sign = '-'; title = tx.details || 'Match Entry Fee'; break;
+                    default: icon = 'fa-exchange-alt'; amountClass = 'debit'; sign = '-'; title = tx.details || 'Transaction';
+                }
+                html += `<div class="tx-item"><div class="tx-icon"><i class="fas ${icon}"></i></div><div class="tx-details"><div class="tx-title">${title}</div><div class="tx-time">${new Date(tx.timestamp).toLocaleString()}</div></div><div class="tx-amount-wrapper"><div class="tx-amount ${amountClass}">${sign} ₹${tx.amount}</div><div class="tx-status ${tx.status}">${tx.status}</div></div></div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+        async function renderLeaderboardPage() {
+            const page = document.getElementById('leaderboard-page');
+            page.innerHTML = `<div class="fs-header"><button class="back-btn"><i class="fas fa-arrow-left"></i></button><h2 class="fs-title">Top Winners</h2></div><div class="fs-content" id="leaderboard-list-container">Loading...</div>`;
+            openFullscreenPage('leaderboard-page');
+            const usersRef = query(ref(db, 'users'), orderByChild('winnings'), limitToLast(50));
+            const snapshot = await get(usersRef);
+            const listContainer = page.querySelector('#leaderboard-list-container');
+            if (!snapshot.exists()) {
+                listContainer.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No data available.</p>`;
+                return;
+            }
+            const users = Object.values(snapshot.val()).filter(u => (u.winnings || 0) > 0).sort((a, b) => b.winnings - a.winnings);
+            if (users.length === 0) {
+                listContainer.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">No winners yet.</p>`;
+                return;
+            }
+            const topThree = users.slice(0, 3);
+            const rest = users.slice(3);
+            let podiumHTML = '<div class="podium">';
+            const podiumOrder = [1, 0, 2];
+            let podiumUsers = [null, null, null];
+            topThree.forEach((user, index) => { podiumUsers[index] = user; });
+            
+            podiumOrder.forEach(index => {
+                const user = podiumUsers[index];
+                if (user) {
+                    const rank = index + 1;
+                    const scoreColors = ['gold', 'silver', 'bronze'];
+                    podiumHTML += `
+                        <div class="podium-item rank-${rank}">
+                            ${rank === 1 ? '<div class="podium-crown"><i class="fas fa-crown"></i></div>' : ''}
+                            <div class="podium-icon">
+                                <i class="fas fa-user-circle"></i>
+                                <div class="podium-rank">${rank}</div>
+                            </div>
+                            <div class="podium-name">${user.displayName}</div>
+                            <div class="podium-score score-${scoreColors[rank-1]}">${user.winnings.toLocaleString()}</div>
+                        </div>`;
+                }
+            });
+            podiumHTML += '</div>';
+
+            let listHTML = '<div class="rank-list">';
+            rest.forEach((user, index) => {
+                const rank = index + 4;
+                listHTML += `
+                    <div class="rank-list-item">
+                        <span class="rank-number">${rank}</span>
+                        <i class="fas fa-user-circle rank-icon"></i>
+                        <span class="rank-name">${user.displayName}</span>
+                        <span class="rank-score">${user.winnings.toLocaleString()}</span>
+                    </div>`;
+            });
+            listHTML += '</div>';
+            listContainer.innerHTML = `<div class="leaderboard-container">${podiumHTML}${listHTML}</div>`;
+        }
+        
+        function renderAddMoneyPage() {
+            const page = document.getElementById('add-money-page');
+            page.innerHTML = `<div class="fs-header"><button class="back-btn"><i class="fas fa-arrow-left"></i></button><h2 class="fs-title">Add Money</h2></div><div class="fs-content"><form id="add-money-form"><div class="form-group"><label>Enter Amount (₹)</label><input type="number" id="add-amount" class="amount-input" value="100" min="10" required></div><div class="preset-amounts"><button type="button" class="preset-amount" data-amount="20">₹20</button><button type="button" class="preset-amount" data-amount="50">₹50</button><button type="button" class="preset-amount" data-amount="100">₹100</button></div><div class="form-group"><label>Mobile Number</label><input type="tel" id="add-mobile" placeholder="Enter mobile number" required></div><button type="submit" class="submit-btn">Submit & Pay</button></form></div>`;
+            openFullscreenPage('add-money-page');
+        }
+        function renderWithdrawMoneyPage() {
+            const page = document.getElementById('withdraw-money-page');
+            page.innerHTML = `<div class="fs-header"><button class="back-btn"><i class="fas fa-arrow-left"></i></button><h2 class="fs-title">Withdraw Money</h2></div><div class="fs-content"><form id="withdraw-form"><div class="form-group"><label>Withdrawal Amount (₹)</label><input type="number" name="amount" class="amount-input" value="100" min="50" required></div><div class="form-group"><label>Payment Method</label><select id="withdraw-method" name="method"><option value="upi">UPI ID</option><option value="bank">Bank Account</option></select></div><div id="upi-details" class="form-group"><label>UPI ID</label><input type="text" name="upiId" placeholder="yourname@upi"></div><div id="bank-details" class="hidden"><div class="form-group"><label>Account Holder Name</label><input type="text" name="accountHolderName"></div><div class="form-group"><label>Account Number</label><input type="text" name="accountNumber"></div><div class="form-group"><label>IFSC Code</label><input type="text" name="ifscCode"></div></div><button type="submit" class="submit-btn">Request Withdrawal</button></form></div>`;
+            openFullscreenPage('withdraw-money-page');
+        }
+        function openFullscreenPage(pageId) { document.getElementById(pageId).classList.add('show'); }
+        function closeFullscreenPage(pageId) { document.getElementById(pageId).classList.remove('show'); }
+        function showRoomDetails(tournamentId) {
+            const t = tournaments[tournamentId];
+            const dialog = document.getElementById('room-details-dialog');
+            dialog.innerHTML = `<div class="dialog-box"><h3>Room Details for ${t.title}</h3><div class="dialog-form"><label>Room ID</label><div class="input-group"><input type="text" id="room-id-display" value="${t.roomId || 'Not available'}" readonly><button class="copy-btn" data-copy="room-id-display">Copy</button></div><label>Password</label><div class="input-group"><input type="text" id="room-pass-display" value="${t.password || 'Not available'}" readonly><button class="copy-btn" data-copy="room-pass-display">Copy</button></div></div><button class="close-dialog-btn">Close</button></div>`;
+            dialog.classList.add('show');
+        }
+
+        function copyToClipboard(elementId) {
+            const input = document.getElementById(elementId);
+            input.select();
+            input.setSelectionRange(0, 99999);
+            try { 
+                document.execCommand('copy'); 
+                showCustomAlert('Copied!');
+            } catch (err) { 
+                showCustomAlert('Failed to copy.');
+            }
+        }
+
+        function submitPayment(form) {
+            const amount = form.elements['add-amount'].value;
+            if (amount < 10) { showCustomAlert("Minimum amount is ₹10."); return; }
+            const options = {
+                key: "rzp_live_wygJUJh3ZbUEUX",
+                amount: amount * 100,
+                currency: "INR",
+                name: "Gamerz App",
+                description: "Add Coins to Wallet",
+                handler: async function (response) {
+                    const newBalance = (userData.wallet || 0) + parseInt(amount);
+                    const updates = {};
+                    updates[`/users/${currentUser.uid}/wallet`] = newBalance;
+                    const newTxRef = push(ref(db, `transactions/${currentUser.uid}`));
+                    updates[`/transactions/${currentUser.uid}/${newTxRef.key}`] = { type: 'Deposit', amount: parseInt(amount), details: 'Added via Razorpay', status: 'Successful', timestamp: serverTimestamp(), paymentId: response.razorpay_payment_id };
+                    await update(ref(db), updates);
+                    showCustomAlert("Payment Successful!");
+                    closeFullscreenPage('add-money-page');
+                },
+                prefill: { name: userData.displayName, email: userData.email, contact: form.elements['add-mobile'].value },
+                theme: { color: "#1e90ff" }
+            };
+            const rzp = new Razorpay(options);
+            rzp.on('payment.failed', (response) => showCustomAlert("Payment Failed: " + response.error.description));
+            rzp.open();
+        }
+        
+        async function submitWithdrawal(form) {
+            const amount = parseInt(form.elements['amount'].value);
+            if(amount > (userData.winnings || 0)) { showCustomAlert("Insufficient winnings balance for withdrawal."); return; }
+            if(amount < 50) { showCustomAlert("Minimum withdrawal amount is ₹50."); return; }
+            const method = form.elements['method'].value;
+            let details = {};
+            if(method === 'upi') details = { upiId: form.elements['upiId'].value };
+            else details = { accountHolderName: form.elements['accountHolderName'].value, accountNumber: form.elements['accountNumber'].value, ifscCode: form.elements['ifscCode'].value };
+            if( (method === 'upi' && !details.upiId) || (method === 'bank' && (!details.accountHolderName || !details.accountNumber || !details.ifscCode)) ) {
+                showCustomAlert('Please fill all required details.'); return;
+            }
+            const updates = {};
+            const reqRef = push(ref(db, 'withdrawalRequests'));
+            updates[`/withdrawalRequests/${reqRef.key}`] = { userId: currentUser.uid, displayName: userData.displayName, wallet: userData.wallet, winnings: userData.winnings, amount: amount, method: method, details: details, status: 'Pending', timestamp: serverTimestamp() };
+            const newTxRef = push(ref(db, `transactions/${currentUser.uid}`));
+            updates[`/transactions/${currentUser.uid}/${newTxRef.key}`] = { type: 'Withdrawal', amount: amount, details: 'Withdrawal Request', status: 'Pending', timestamp: serverTimestamp(), requestId: reqRef.key };
+            try {
+                await update(ref(db), updates);
+                showCustomAlert('Withdrawal request submitted!');
+                closeFullscreenPage('withdraw-money-page');
+            } catch(e) {
+                showCustomAlert('An error occurred: ' + e.message);
+            }
+        }
+
+        async function renderResultsPage(tournamentId) {
+            const page = document.getElementById('results-page');
+            const tournamentTitle = tournaments[tournamentId]?.title || 'Results';
+            page.innerHTML = `<div class="fs-header"><button class="back-btn"><i class="fas fa-arrow-left"></i></button><h2 class="fs-title">${tournamentTitle} - Winners</h2></div><div class="fs-content"><div id="results-list" class="results-list">Loading...</div></div>`;
+            openFullscreenPage('results-page');
+            
+            const winnersRef = ref(db, `winners/${tournamentId}`);
+            const snapshot = await get(winnersRef);
+            const listEl = page.querySelector('#results-list');
+
+            if(!snapshot.exists()) { 
+                listEl.innerHTML = `<p style="text-align:center; padding: 20px; color: var(--text-secondary);">Results are not yet declared.</p>`; 
+                return; 
+            }
+
+            const winners = Object.values(snapshot.val()).sort((a,b) => b.prize - a.prize);
+            let html = '';
+            
+            winners.forEach((winner, index) => {
+                const rank = index + 1;
+                let rankDisplay;
+                switch(rank) {
+                    case 1: rankDisplay = '🥇'; break;
+                    case 2: rankDisplay = '🥈'; break;
+                    case 3: rankDisplay = '🥉'; break;
+                    default: rankDisplay = rank;
+                }
+
+                html += `<div class="result-card rank-${rank > 3 ? 'other' : rank}"><div class="result-info"><div class="result-rank">${rankDisplay}</div><div class="result-name">${winner.displayName}</div></div><div class="result-prize">+ ₹${winner.prize}</div></div>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+    </script>
+</body>
+</html>
